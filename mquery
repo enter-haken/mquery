@@ -1,0 +1,168 @@
+#!/usr/bin/env python
+import os
+import sys
+import time
+import pymongo
+
+import argparse
+import configparser
+
+from bson.json_util import dumps as bsonDumps
+from bson.json_util import loads as bsonLoads
+
+from json import loads as jsonLoads
+
+class MongoDb:
+
+    @property
+    def connection(self):
+        '''
+        Get the current connection instance
+        '''
+        return self.__conn
+
+    def __init__(self,system):
+        config = get_config()
+        currentConfig = config[system]
+
+        if 'url' not in currentConfig:
+            self.__conn = pymongo.MongoClient()
+        else:
+            self.__conn = pymongo.MongoClient(currentConfig['url'])
+
+        if 'user' in currentConfig and 'password' in currentConfig:
+            self.__conn.admin.authenticate(currentConfig['user'], currentConfig['password'])
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self):
+        self.__conn.close()
+
+def create_initial_config_if_not_exists_for(configFilePath):
+    
+    config = configparser.ConfigParser()
+    config['DEFAULTS'] = { 'DefaultSystem' : 'LOCAL' }
+    config['LOCAL'] = { 'Url' : 'localhost' }
+    
+    with open(configFilePath,'w') as f:
+        config.write(f)
+
+def get_config():
+    
+    homeDir = os.path.expanduser("~") 
+    config = configparser.ConfigParser()
+
+    configFilePath = os.path.join(homeDir, '.mquery')
+    
+    if not os.path.isfile(configFilePath):
+        create_initial_config_if_not_exists_for(configFilePath)
+
+    config = configparser.ConfigParser()
+    config.read(configFilePath)
+    
+    return config
+
+def main():
+    config = get_config()
+
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument('-s', '--system',default=config['DEFAULTS']['DefaultSystem'] , 
+            choices = tuple([ x for x in config.sections() if 'DEFAULT' not in x] )   , help='choose system configured in ~/.mquery')
+    PARSER.add_argument('-d', '--database', default="Data",  help='choose database')
+    
+    PARSER.add_argument('-c', '--collection', help='choose collection to query')
+    PARSER.add_argument('-q', '--query', help='get query (json)')
+    PARSER.add_argument('-p', '--projection', help='raw json projection')
+    PARSER.add_argument('-C', '--count', action='store_true', help='count documents for given cursor')
+    PARSER.add_argument('-F', '--followCount', action='store_true', help='show insert velocity. depends on -C/--count. counts every second')
+    
+    PARSER.add_argument('-L', '--listCollections', action='store_true', help='show collections for given database')
+    
+    PARSER.add_argument('-D', '--distinct',  help='distinct field for cursor')
+
+    PARSER.add_argument('-i', '--include', nargs="+", help='include fields')
+    PARSER.add_argument('-e', '--exclude', nargs="+", help='exclude field')
+    
+    PARSER.add_argument('-v', '--verbose', nargs="+", help='verbose output. seperate values by dash. compact view. projects fields.  ')
+    PARSER.add_argument('-l', '--limit',type=int,default=10, help='limits cursor')
+    
+    PARSER.add_argument('-1', '--sortAscending', nargs="+",  help='sort field')
+    PARSER.add_argument('-2', '--sortDescending',nargs="+",  help='sort field')
+    
+    args = PARSER.parse_args()
+
+    mongoDb = MongoDb(args.system)
+
+    db = mongoDb.connection[args.database]
+
+    if args.listCollections:
+        print(db.collection_names(include_system_collections=False))
+        sys.exit(0)
+
+    if not args.collection:
+        raise Exception("collection name not given. try mquery -h for usage")
+
+    collection = db[args.collection]
+
+    query = {}
+    project = None
+
+    if args.query:
+        query = bsonLoads(args.query)
+
+    if args.projection:
+        project = jsonLoads(args.projection)
+
+    if args.include:
+        project = { k: 1 for k in args.include }
+
+    if args.exclude: 
+        project = { k: 0 for k in args.exclude }
+
+    sorter = [( '_id', -1 )]
+
+    # todo -> keep order in args array
+    if args.sortAscending:
+        sorter = list({ k: 1 for k in args.sortAscending }.items())
+
+    if args.sortDescending:
+        sorter = list({ k: -1 for k in args.sortDescending }.items())
+
+    if args.verbose:
+        project = { k: 1 for k in args.verbose }
+
+    unlimitedCursor = collection.find(query, project)
+
+    if args.count:
+        print(str(unlimitedCursor.count()))
+        
+        if not args.followCount:
+            sys.exit(0)
+        
+        lastCount = 0
+        currentCount = 0
+
+        while(True):
+            currentCount = unlimitedCursor.count()
+            print("Count {} - documents per second {} ".format(str(currentCount), str(currentCount - lastCount) ) )
+            lastCount = currentCount
+            time.sleep(1)
+
+    if args.distinct:
+        print(str(unlimitedCursor.distinct(args.distinct)))
+        sys.exit(0)
+    
+    for document in unlimitedCursor.limit(args.limit).sort(sorter):
+
+        if not args.verbose:
+            print(bsonDumps(document))
+        else:
+            row = []
+            for field in args.verbose:
+                row.append(str('None' if not field in document else document[field]))
+
+            print(" - ".join(row))
+
+if __name__ == '__main__':
+    main()
