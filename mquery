@@ -78,6 +78,8 @@ def main():
     PARSER.add_argument('-f', '--fields', action='store_true', help='get fields from first document')
     PARSER.add_argument('-F', '--followCount', action='store_true', help='show insert velocity. depends on -C/--count. counts every second')
     
+    PARSER.add_argument('-o', '--opLog', action='store_true', help='follow the op log entrys one per second')
+    
     PARSER.add_argument('-L', '--listCollections', action='store_true', help='show collections for given database')
     
     PARSER.add_argument('-D', '--distinct',  help='distinct field for cursor')
@@ -101,6 +103,19 @@ def main():
         print(db.collection_names(include_system_collections=False))
         sys.exit(0)
 
+    if args.opLog:
+        opLogCursor = db.oplog.rs.find({})
+        try:
+            while opLogCursor.alive:
+                nextCursor = opLogCursor.next()
+                
+                print(" - ".join([ str(nextCursor['ts'].as_datetime()), str(nextCursor['h']),str(nextCursor['op']),str(nextCursor['ns'])]))
+
+                time.sleep(1)
+        finally:
+            opLogCursor.close()
+            sys.exit(0)
+ 
     if not args.collection:
         raise Exception("collection name not given. try mquery -h for usage")
 
@@ -159,7 +174,7 @@ def main():
     if args.distinct:
         print(str(unlimitedCursor.distinct(args.distinct)))
         sys.exit(0)
-    
+   
     for document in unlimitedCursor.limit(args.limit).sort(sorter):
 
         if not args.verbose:
