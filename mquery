@@ -75,6 +75,7 @@ def main():
     PARSER.add_argument('-q', '--query', help='get query (json)')
     PARSER.add_argument('-p', '--projection', help='raw json projection')
     PARSER.add_argument('-C', '--count', action='store_true', help='count documents for given cursor')
+    PARSER.add_argument('-f', '--fields', action='store_true', help='get fields from first document')
     PARSER.add_argument('-F', '--followCount', action='store_true', help='show insert velocity. depends on -C/--count. counts every second')
     
     PARSER.add_argument('-L', '--listCollections', action='store_true', help='show collections for given database')
@@ -131,6 +132,12 @@ def main():
 
     if args.verbose:
         project = { k: 1 for k in args.verbose }
+
+    if args.fields:
+        firstDocument = collection.find_one(query, project)
+        if firstDocument:
+            print(list(firstDocument.keys()))
+            sys.exit(0)
 
     unlimitedCursor = collection.find(query, project)
 
