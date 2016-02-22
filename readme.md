@@ -38,16 +38,16 @@ password = password
 ### Parameter
 
 ```
-usage: mquery [-h] [-s {LOCAL,PROD,QA}]
+usage: mquery [-h] [-s {LOCAL,PROD,QA,DEV,BWIDEV,BWIQA,ARCHIV,HAKE}]
               [-d DATABASE] [-c COLLECTION] [-q QUERY] [-p PROJECTION] [-C]
-              [-F] [-L] [-D DISTINCT] [-i INCLUDE [INCLUDE ...]]
+              [-f] [-F] [-o] [-L] [-D DISTINCT] [-i INCLUDE [INCLUDE ...]]
               [-e EXCLUDE [EXCLUDE ...]] [-v VERBOSE [VERBOSE ...]] [-l LIMIT]
               [-1 SORTASCENDING [SORTASCENDING ...]]
               [-2 SORTDESCENDING [SORTDESCENDING ...]]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -s {LOCAL,PROD,QA}, --system {LOCAL,PROD,QA}
+  -s {LOCAL,PROD,QA,DEV,BWIDEV,BWIQA,ARCHIV,HAKE}, --system {LOCAL,PROD,QA,DEV,BWIDEV,BWIQA,ARCHIV,HAKE}
                         choose system configured in ~/.mquery
   -d DATABASE, --database DATABASE
                         choose database
@@ -58,8 +58,10 @@ optional arguments:
   -p PROJECTION, --projection PROJECTION
                         raw json projection
   -C, --count           count documents for given cursor
+  -f, --fields          get fields from first document
   -F, --followCount     show insert velocity. depends on -C/--count. counts
                         every second
+  -o, --opLog           follow the op log entrys one per second
   -L, --listCollections
                         show collections for given database
   -D DISTINCT, --distinct DISTINCT
