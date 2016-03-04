@@ -5,7 +5,6 @@ import time
 import pymongo
 
 import argparse
-
 import yaml
 
 from bson.json_util import dumps as bsonDumps
@@ -69,27 +68,50 @@ def get_config():
    
     return config
 
+def get_oplog(cursor):
+
+    try:
+        while cursor.alive:
+            nextCursor = cursor.next()
+            
+            print(" - ".join([ str(nextCursor['ts'].as_datetime()), str(nextCursor['h']),str(nextCursor['op']),str(nextCursor['ns'])]))
+
+            time.sleep(1)
+    finally:
+        cursor.close()
+        sys.exit(0)
+
+def get_config_help(config, section):
+
+    result = []
+    for k in config[section].keys():
+        row = [k]
+        if 'description' in config[section][k]: 
+            row.append(config[section][k]['description'])
+            result.append(" - ".join(row))
+
+    return "\n".join(result)
+ 
 def main():
     config = get_config()
 
-    PARSER = argparse.ArgumentParser()
+    PARSER = argparse.ArgumentParser(description="query the mongo", formatter_class=argparse.RawTextHelpFormatter)
     PARSER.add_argument('-s', '--system',default=config['defaults']['defaultsystem'] , 
-            choices = tuple([ x for x in config['systems'] ] )   , help='choose system configured in ~/.mquery')
+            choices = tuple([ x for x in config['systems'] ] )   , help=get_config_help(config,'systems'))
     PARSER.add_argument('-d', '--database', default="Data",  help='choose database')
     
     PARSER.add_argument('-c', '--collection', help='choose collection to query')
     PARSER.add_argument('-q', '--query', help='get query (json)')
+    PARSER.add_argument('-D', '--distinct',  help='distinct field for cursor')
+
     PARSER.add_argument('-p', '--projection', help='raw json projection')
-    PARSER.add_argument('-C', '--count', action='store_true', help='count documents for given cursor')
     PARSER.add_argument('-f', '--fields', action='store_true', help='get fields from first document')
+    PARSER.add_argument('-C', '--count', action='store_true', help='count documents for given cursor')
     PARSER.add_argument('-F', '--followCount', action='store_true', help='show insert velocity. depends on -C/--count. counts every second')
     
     PARSER.add_argument('-o', '--opLog', action='store_true', help='follow the op log entrys one per second')
-    
     PARSER.add_argument('-L', '--listCollections', action='store_true', help='show collections for given database')
     
-    PARSER.add_argument('-D', '--distinct',  help='distinct field for cursor')
-
     PARSER.add_argument('-i', '--include', nargs="+", help='include fields')
     PARSER.add_argument('-e', '--exclude', nargs="+", help='exclude field')
     
@@ -98,6 +120,8 @@ def main():
     
     PARSER.add_argument('-1', '--sortAscending', nargs="+",  help='sort field')
     PARSER.add_argument('-2', '--sortDescending',nargs="+",  help='sort field')
+ 
+    PARSER.add_argument('-S', '--storedQuery', choices = tuple([ x for x in config['queries'] ] ) , help=get_config_help(config,'queries'))
     
     args = PARSER.parse_args()
 
@@ -110,37 +134,45 @@ def main():
         sys.exit(0)
 
     if args.opLog:
-        opLogCursor = mongoDb.connection['local'].oplog.rs.find({})
-        try:
-            while opLogCursor.alive:
-                nextCursor = opLogCursor.next()
-                
-                print(" - ".join([ str(nextCursor['ts'].as_datetime()), str(nextCursor['h']),str(nextCursor['op']),str(nextCursor['ns'])]))
+        get_oplog(mongoDb.connection['local'].oplog.rs.find({}))
 
-                time.sleep(1)
-        finally:
-            opLogCursor.close()
-            sys.exit(0)
- 
+    query = {}
+    project = None
+
+    if args.storedQuery:
+        q = config['queries'][args.storedQuery]
+        
+        args.collection = q['collection']
+        query = q['query']
+        project = q['fields']
+        if q['verbose']:
+            queryFields = list(q['fields'].keys())
+            if not args.verbose:
+                args.verbose = queryFields
+            else:
+                args.verbose = queryFields + args.verbose
+
     if not args.collection:
         raise Exception("collection name not given. try mquery -h for usage")
 
     collection = db[args.collection]
 
-    query = {}
-    project = None
-
     if args.query:
-        query = bsonLoads(args.query)
+        if not query:
+            query = bsonLoads(args.query)
+        else:
+            query.update(bsonLoads(args.query))
 
     if args.projection:
-        project = jsonLoads(args.projection)
+        project = jsonLoads(args.projection) if not project else project.update(jsonLoads(args.projection))
 
     if args.include:
-        project = { k: 1 for k in args.include }
+        include = { k: 1 for k in args.include }
+        project = include if not project else project.update(include)
 
     if args.exclude: 
-        project = { k: 0 for k in args.exclude }
+        exclude = { k: 0 for k in args.exclude }
+        project = exclude if not project else project.update(exclude)
 
     sorter = [( '_id', -1 )]
 
