@@ -7,7 +7,7 @@ The goal of the `mquery` project is to access a [mongoDB](https://www.mongodb.or
 
 ```bash
 pip install pymongo
-pip install configparser
+pip install PyYAML
 ```
 
 ### Configuration
