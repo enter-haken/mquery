@@ -109,19 +109,20 @@ def main():
     PARSER.add_argument('-C', '--count', action='store_true', help='count documents for given cursor')
     PARSER.add_argument('-F', '--followCount', action='store_true', help='show insert velocity. depends on -C/--count. counts every second')
     
-    PARSER.add_argument('-o', '--opLog', action='store_true', help='follow the op log entrys one per second')
+    PARSER.add_argument('-o', '--opLog', action='store_true', help='follow the op log entries one per second')
     PARSER.add_argument('-L', '--listCollections', action='store_true', help='show collections for given database')
     
     PARSER.add_argument('-i', '--include', nargs="+", help='include fields')
     PARSER.add_argument('-e', '--exclude', nargs="+", help='exclude field')
     
-    PARSER.add_argument('-v', '--verbose', nargs="+", help='verbose output. seperate values by dash. compact view. projects fields.  ')
+    PARSER.add_argument('-v', '--verbose', nargs="+", help='verbose output. separate values by dash. compact view. projects fields.  ')
     PARSER.add_argument('-l', '--limit',type=int,default=10, help='limits cursor')
     
     PARSER.add_argument('-1', '--sortAscending', nargs="+",  help='sort field')
     PARSER.add_argument('-2', '--sortDescending',nargs="+",  help='sort field')
  
-    PARSER.add_argument('-S', '--storedQuery', choices = tuple([ x for x in config['queries'] ] ) , help=get_config_help(config,'queries'))
+    if 'queries' in config:
+        PARSER.add_argument('-S', '--storedQuery', choices = tuple([ x for x in config['queries'] ] ) , help=get_config_help(config,'queries'))
     
     args = PARSER.parse_args()
 
@@ -139,11 +140,14 @@ def main():
     query = {}
     project = None
 
-    if args.storedQuery:
+    if 'queries' in config and args.storedQuery:
         q = config['queries'][args.storedQuery]
         
         args.collection = q['collection']
-        query = q['query']
+        
+        if 'query' in q:
+            query = q['query']
+
         project = q['fields']
         if q['verbose']:
             queryFields = list(q['fields'].keys())
