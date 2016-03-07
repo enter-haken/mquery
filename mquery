@@ -91,6 +91,14 @@ def get_config_help(config, section):
             result.append(" - ".join(row))
 
     return "\n".join(result)
+
+def get_field_from_first_document(collection, query):
+    firstDocument = collection.find_one(query)
+    
+    if firstDocument:
+       return list(firstDocument.keys())
+
+    return []
  
 def main():
     config = get_config()
@@ -188,13 +196,16 @@ def main():
         sorter = list({ k: -1 for k in args.sortDescending }.items())
 
     if args.verbose:
+        if args.verbose[0] == "allFields":
+            args.verbose = get_field_from_first_document(collection,query)
+        
         project = { k: 1 for k in args.verbose }
 
     if args.fields:
-        firstDocument = collection.find_one(query, project)
-        if firstDocument:
-            print(list(firstDocument.keys()))
-            sys.exit(0)
+        result = get_field_from_first_document(collection,query)
+        if result:
+            print(result)
+        sys.exit(0)
 
     unlimitedCursor = collection.find(query, project)
 
