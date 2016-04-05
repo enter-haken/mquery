@@ -104,7 +104,7 @@ def main():
     config = get_config()
 
     PARSER = argparse.ArgumentParser(description="query the mongo", formatter_class=argparse.RawTextHelpFormatter)
-    PARSER.add_argument('-s', '--system',default=config['defaults']['defaultsystem'] , 
+    PARSER.add_argument('-s', '--system', default=config['defaults']['defaultsystem'], 
             choices = tuple([ x for x in config['systems'] ] )   , help=get_config_help(config,'systems'))
     PARSER.add_argument('-d', '--database', default="Data",  help='choose database')
     
@@ -135,8 +135,9 @@ def main():
     args = PARSER.parse_args()
 
     mongoDb = MongoDb(args.system)
+    currentSystem = config['systems'][args.system]
 
-    db = mongoDb.connection[args.database]
+    db = mongoDb.connection[args.database if not 'database' in currentSystem else currentSystem['database']]
 
     if args.listCollections:
         print(db.collection_names(include_system_collections=False))
