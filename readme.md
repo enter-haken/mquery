@@ -80,10 +80,10 @@ The description is optional, and will appear in the help.
 ### Parameter
 
 ```
-usage: mquery [-h] [-s {LOCAL,BWIDEV,QA,ARCHIV,PROD,BWIQA,DEV,HAKE}]
-              [-d DATABASE] [-c COLLECTION] [-q QUERY] [-D DISTINCT]
-              [-p PROJECTION] [-f] [-C] [-F] [-o] [-L]
-              [-i INCLUDE [INCLUDE ...]] [-e EXCLUDE [EXCLUDE ...]]
+usage: mquery [-h] [-s {PROD,BWIQA,LOCAL,DEV,HAKE,BWIDEV,QA,ARCHIV}]
+              [-d DATABASE] [-c COLLECTION] [-q QUERY] [-i ID [ID ...]]
+              [-D DISTINCT] [-p PROJECTION] [-f] [-C] [-F] [-o] [-L]
+              [-I INCLUDE [INCLUDE ...]] [-E EXCLUDE [EXCLUDE ...]]
               [-v VERBOSE [VERBOSE ...]] [-l LIMIT]
               [-1 SORTASCENDING [SORTASCENDING ...]]
               [-2 SORTDESCENDING [SORTDESCENDING ...]]
@@ -94,12 +94,14 @@ optional arguments:
   -h, --help            show this help message and exit
   -s {LOCAL}, --system {LOCAL}
                         LOCAL - local database
- -d DATABASE, --database DATABASE
+  -d DATABASE, --database DATABASE
                         choose database
   -c COLLECTION, --collection COLLECTION
                         choose collection to query
   -q QUERY, --query QUERY
                         get query (json)
+  -i ID [ID ...], --id ID [ID ...]
+                        get documents by id
   -D DISTINCT, --distinct DISTINCT
                         distinct field for cursor
   -p PROJECTION, --projection PROJECTION
@@ -110,9 +112,9 @@ optional arguments:
   -o, --opLog           follow the op log entries one per second
   -L, --listCollections
                         show collections for given database
-  -i INCLUDE [INCLUDE ...], --include INCLUDE [INCLUDE ...]
+  -I INCLUDE [INCLUDE ...], --include INCLUDE [INCLUDE ...]
                         include fields
-  -e EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
+  -E EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
                         exclude field
   -v VERBOSE [VERBOSE ...], --verbose VERBOSE [VERBOSE ...]
                         verbose output. separate values by dash. compact view. projects fields.  

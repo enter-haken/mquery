@@ -110,6 +110,7 @@ def main():
     
     PARSER.add_argument('-c', '--collection', help='choose collection to query')
     PARSER.add_argument('-q', '--query', help='get query (json)')
+    PARSER.add_argument('-i', '--id',type=int, nargs="+", help='get documents by id')
     PARSER.add_argument('-D', '--distinct',  help='distinct field for cursor')
 
     PARSER.add_argument('-p', '--projection', help='raw json projection')
@@ -120,8 +121,8 @@ def main():
     PARSER.add_argument('-o', '--opLog', action='store_true', help='follow the op log entries one per second')
     PARSER.add_argument('-L', '--listCollections', action='store_true', help='show collections for given database')
     
-    PARSER.add_argument('-i', '--include', nargs="+", help='include fields')
-    PARSER.add_argument('-e', '--exclude', nargs="+", help='exclude field')
+    PARSER.add_argument('-I', '--include', nargs="+", help='include fields')
+    PARSER.add_argument('-E', '--exclude', nargs="+", help='exclude field')
     
     PARSER.add_argument('-v', '--verbose', nargs="+", help='verbose output. separate values by dash. compact view. projects fields.  ')
     PARSER.add_argument('-l', '--limit',type=int,default=10, help='limits cursor')
@@ -175,6 +176,12 @@ def main():
             query = bsonLoads(args.query)
         else:
             query.update(bsonLoads(args.query))
+
+    if args.id and '_id' not in query:
+        if len(args.id) > 1:
+            query['_id'] = { "$in" : args.id }
+        else:
+            query['_id'] = args.id[0]
 
     if args.projection:
         project = jsonLoads(args.projection) if not project else project.update(jsonLoads(args.projection))
